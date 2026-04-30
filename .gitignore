@@ -1,0 +1,26 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Node (in case future versions add a build step)
+node_modules/
+npm-debug.log*
+
+# Local env files — NEVER commit (contain Epicor credentials)
+.env
+.env.local
+.env.*.local
+
+# Secrets / credentials — never commit
+*.pem
+*.key
+azure-creds.json
+
+# Build artifacts (none today, but reserved)
+dist/
+build/

@@ -1,0 +1,2410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1A1A1E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Shop Floor Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1A1A1E;
+    --bg-1: #202024;
+    --bg-2: #26262C;
+    --bg-3: #2D2D34;
+    --bg-4: #36363E;
+    --border: #2E2E36;
+    --border-strong: #3F3F48;
+    --border-red: #5A2A2E;
+
+    --ink: #E8E8EA;
+    --ink-2: #B0B0B8;
+    --ink-3: #74747E;
+    --ink-4: #4A4A53;
+
+    --red: #D04A52;
+    --red-bright: #DC5A62;
+    --red-deep: #A33840;
+    --red-bg: #2A1A1C;
+    --red-bg-2: #362023;
+    --red-glow: none;
+    --red-glow-strong: none;
+
+    --yellow: #E0A93A;
+    --orange: #D87A35;
+    --hot: #D85540;
+    --ok: #5DBE7E;
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.25);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Manrope', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 16px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* HEADER */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    transition: border-color 0.2s;
+  }
+  body.admin .topbar {
+    border-bottom-color: var(--red);
+  }
+  .topbar-left { display: flex; align-items: center; gap: 14px; }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    line-height: 1;
+    font-family: 'Anton', sans-serif;
+    font-weight: 400;
+    font-size: 30px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .brand-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--ok);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .brand-dot::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: var(--ok);
+    opacity: 0.25;
+    animation: brand-pulse 2s ease-in-out infinite;
+  }
+  @keyframes brand-pulse {
+    0%, 100% { transform: scale(0.9); opacity: 0.25; }
+    50% { transform: scale(1.4); opacity: 0; }
+  }
+  .brand-live {
+    color: var(--ok);
+  }
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .date-stamp {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-2);
+    text-align: right;
+  }
+  .date-stamp-day {
+    font-weight: 600;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 11px;
+  }
+  @keyframes blink {
+    0%, 90%, 100% { opacity: 1; }
+    95% { opacity: 0.3; }
+  }
+  .date-stamp-date {
+    font-size: 13px;
+    margin-top: 3px;
+    letter-spacing: 0.04em;
+  }
+
+  .lock-btn {
+    appearance: none;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-2);
+    width: 44px; height: 44px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-2);
+    transition: all 0.15s;
+  }
+  .lock-btn:hover { color: var(--ink); border-color: var(--red); }
+  .lock-btn:active { transform: scale(0.94); }
+  .lock-btn svg { width: 20px; height: 20px; }
+
+  .admin-pill {
+    appearance: none;
+    border: 1px solid var(--red);
+    background: var(--red-bg-2);
+    color: var(--red-bright);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    padding: 11px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    transition: transform 0.1s;
+  }
+  .admin-pill:active { transform: scale(0.97); }
+  .admin-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--red-bright);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  /* ADMIN BANNER */
+  .admin-banner {
+    background: var(--red-bg);
+    color: var(--red-bright);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 9px 20px;
+    border-bottom: 1px solid var(--border-red);
+    display: none;
+  }
+  body.admin .admin-banner { display: block; }
+  .admin-banner span {
+    color: var(--ink-2);
+    font-weight: 500;
+    margin-left: 8px;
+  }
+
+  /* BACK BUTTON */
+  .back-btn {
+    appearance: none;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-2);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 12px 16px 12px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s;
+  }
+  .back-btn:hover { border-color: var(--red); color: var(--ink); }
+  .back-btn:active { transform: scale(0.97); background: var(--bg-3); }
+  .back-btn svg { width: 16px; height: 16px; }
+
+  /* MAIN CONTENT */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  /* VIEW TRANSITIONS */
+  .view {
+    animation: viewIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  @keyframes viewIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* OPERATIONS VIEW */
+  .ops-header {
+    padding: 32px 28px 20px;
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    position: relative;
+  }
+  .ops-header::before {
+    content: "Queue Status";
+    position: absolute;
+    top: 16px;
+    left: 28px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .ops-title {
+    font-family: 'Anton', sans-serif;
+    font-weight: 400;
+    font-size: clamp(40px, 5vw, 64px);
+    letter-spacing: 0.01em;
+    line-height: 1;
+    color: var(--ink);
+    text-transform: uppercase;
+    margin-top: 22px;
+  }
+  .ops-title em {
+    font-style: normal;
+    color: var(--red);
+  }
+  .filter-note {
+    font-family: 'Manrope', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-3);
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .filter-note strong {
+    color: var(--ink-2);
+    font-weight: 600;
+  }
+  .ops-summary {
+    display: none;
+    gap: 0;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    background: var(--bg-1);
+    border-radius: 4px;
+  }
+  body.admin .ops-summary { display: flex; }
+  .stat {
+    text-align: right;
+    padding: 14px 22px;
+    border-right: 1px solid var(--border);
+    min-width: 96px;
+  }
+  .stat:last-child { border-right: none; }
+  .stat-num {
+    font-family: 'Anton', sans-serif;
+    font-weight: 400;
+    font-size: 42px;
+    line-height: 0.9;
+    color: var(--ink);
+    letter-spacing: 0.01em;
+  }
+  .stat.late .stat-num { color: var(--red-bright); }
+  .stat.hot .stat-num { color: var(--hot); }
+  .stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-top: 6px;
+  }
+
+  .ops-instruction {
+    padding: 8px 28px 24px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-3);
+  }
+
+  .ops-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+    padding: 0 28px 40px;
+  }
+
+  .op-tile {
+    appearance: none;
+    border: 1px solid var(--border);
+    background: var(--bg-1);
+    text-align: left;
+    padding: 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 130px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.15s, border-color 0.15s, background 0.15s;
+    font-family: inherit;
+    color: var(--ink);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .op-tile:focus-visible {
+    outline: 2px solid var(--ink-3);
+    outline-offset: 2px;
+  }
+  .op-tile:hover {
+    border-color: var(--border-strong);
+    background: var(--bg-2);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  .op-tile:active {
+    transform: translateY(0) scale(0.99);
+  }
+  .op-tile.has-late {
+    border-color: var(--red-deep);
+  }
+  .op-tile.all-late {
+    background: var(--red-bg);
+    border-color: var(--red-deep);
+  }
+  .op-tile.has-hot {
+    background: var(--bg-2);
+    border-color: var(--hot);
+  }
+  /* Active op — currently has work in progress. Subtle green left accent
+     plus tinted background so an operator can see at a glance which centers
+     are live. Compatible with has-late (red border still wins for admin),
+     overridden by has-hot (orange border still wins). */
+  .op-tile.has-running {
+    border-left: 3px solid var(--ok);
+    background: linear-gradient(90deg, rgba(93,190,126,0.05) 0%, var(--bg-1) 70%);
+  }
+  .op-tile.has-running:hover {
+    background: linear-gradient(90deg, rgba(93,190,126,0.07) 0%, var(--bg-2) 70%);
+  }
+  /* HOT supersedes the green tint visually */
+  .op-tile.has-hot.has-running {
+    border-left-color: var(--hot);
+    background: var(--bg-2);
+  }
+
+  .op-tile-flag {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: var(--hot);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    padding: 3px 8px;
+    border-radius: 3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-transform: uppercase;
+  }
+  .op-tile-flag svg { width: 11px; height: 11px; }
+
+  .op-code {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+  }
+  .op-tile.all-late .op-code { color: var(--red-bright); }
+  .op-tile.has-hot .op-code { color: var(--hot); }
+  .op-desc {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 600;
+    font-size: 22px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    flex: 1;
+  }
+  .op-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: auto;
+  }
+  .op-count {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .op-count-num {
+    font-family: 'Anton', sans-serif;
+    font-weight: 400;
+    font-size: 30px;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+  }
+  .op-count-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .op-late-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--red-deep);
+    color: var(--red-bright);
+    padding: 4px 9px 4px 7px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .op-late-pill::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    background: var(--red-bright);
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  .op-running-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--ok);
+    color: var(--ok);
+    padding: 4px 9px 4px 7px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .op-running-pill::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    background: var(--ok);
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* JOBS VIEW */
+  .jobs-header {
+    padding: 24px 28px 16px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+  body.admin .jobs-header {
+    border-bottom-color: var(--red);
+  }
+  .jobs-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .jobs-header-left { display: flex; align-items: center; gap: 16px; flex: 1; min-width: 0; }
+  .jobs-title-block { min-width: 0; flex: 1; }
+  .jobs-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--red);
+  }
+  .jobs-title {
+    font-family: 'Anton', sans-serif;
+    font-weight: 400;
+    font-size: clamp(32px, 4vw, 48px);
+    letter-spacing: 0.01em;
+    line-height: 1;
+    color: var(--ink);
+    margin-top: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+  .jobs-counts {
+    display: none;
+    gap: 0;
+    align-items: center;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    background: var(--bg-1);
+    border-radius: 4px;
+  }
+  body.admin .jobs-counts { display: flex; }
+  .jobs-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    text-align: right;
+    padding: 10px 16px;
+    border-right: 1px solid var(--border);
+  }
+  .jobs-count:last-child { border-right: none; }
+  .jobs-count strong {
+    display: block;
+    font-family: 'Anton', sans-serif;
+    font-weight: 400;
+    font-size: 26px;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .jobs-count.late strong { color: var(--red-bright); }
+  .jobs-count.hot strong { color: var(--hot); }
+
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .filter-chip {
+    appearance: none;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-2);
+    color: var(--ink-2);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 9px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+  }
+  .filter-chip:hover { color: var(--ink); border-color: var(--ink-3); }
+  .filter-chip:active { transform: scale(0.96); }
+  .filter-chip.active {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+  .filter-chip.late.active {
+    background: var(--red);
+    border-color: var(--red);
+    color: var(--ink);
+  }
+  .filter-chip.hot.active {
+    background: var(--hot);
+    border-color: var(--hot);
+    color: var(--ink);
+  }
+  .search-input {
+    flex: 1;
+    min-width: 180px;
+    appearance: none;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-2);
+    color: var(--ink);
+    font-family: 'Manrope', sans-serif;
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .search-input::placeholder { color: var(--ink-3); }
+  .search-input:focus {
+    border-color: var(--ink-3);
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.04);
+  }
+
+  /* JOB LIST */
+  .job-list {
+    padding: 20px 28px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .list-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 0 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .list-divider.hot {
+    color: var(--hot);
+  }
+  .list-divider::before, .list-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .list-divider.hot::before, .list-divider.hot::after {
+    background: var(--hot);
+    opacity: 0.3;
+  }
+  .list-divider:first-child { padding-top: 0; }
+
+  .list-divider.running {
+    color: var(--ok);
+  }
+  .list-divider.running::before, .list-divider.running::after {
+    background: var(--ok);
+    opacity: 0.3;
+  }
+  .running-pulse {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--ok);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .running-pulse::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: var(--ok);
+    opacity: 0.3;
+    animation: brand-pulse 2s ease-in-out infinite;
+  }
+
+  .job-card {
+    display: grid;
+    grid-template-columns: 96px 1fr auto;
+    gap: 20px;
+    align-items: stretch;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--ok);
+    border-radius: 4px;
+    padding: 18px 20px;
+    transition: background 0.15s, border-color 0.15s;
+    position: relative;
+  }
+  .job-card:hover { background: var(--bg-2); }
+  .job-card.late {
+    border-color: var(--border);
+    border-left-color: var(--red);
+  }
+  .job-card.critical {
+    border-color: var(--red-deep);
+    border-left-color: var(--red);
+    background: var(--red-bg);
+  }
+  .job-card.hot {
+    border: 1px solid var(--hot);
+    border-left: 3px solid var(--hot);
+    background: var(--bg-1);
+    padding-top: 26px;
+    position: relative;
+  }
+  .job-card.hot::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--hot);
+    border-radius: 4px 4px 0 0;
+    opacity: 0.7;
+  }
+  /* Active = currently being worked. Green accent, slightly emphasized. */
+  .job-card.active {
+    border-color: var(--ok);
+    border-left-width: 4px;
+    background: linear-gradient(90deg, rgba(93,190,126,0.07) 0%, var(--bg-1) 60%);
+    padding-top: 26px;
+  }
+  .job-card.active::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--ok);
+    border-radius: 4px 4px 0 0;
+    opacity: 0.55;
+  }
+  /* When a job is BOTH HOT and active, HOT visuals take precedence — the HOT
+     card already has its own ::before, padding, border. We add a subtle inner
+     green hint via an inset shadow so the running state is still legible. */
+  .job-card.hot.active {
+    box-shadow: inset 4px 0 0 var(--ok);
+    background: linear-gradient(90deg, rgba(93,190,126,0.06) 0%, var(--bg-1) 50%);
+  }
+  .job-card.hot.active::before {
+    background: var(--hot);
+    opacity: 0.7;
+  }
+
+  .running-flag {
+    position: absolute;
+    top: 12px; right: 14px;
+    background: var(--ok);
+    color: var(--bg);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    padding: 4px 10px 4px 8px;
+    border-radius: 3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+  }
+  .running-flag .running-pulse {
+    background: var(--bg);
+    width: 6px; height: 6px;
+  }
+  .running-flag .running-pulse::after {
+    background: var(--bg);
+    opacity: 0.4;
+  }
+  /* When card is HOT and active, the HOT flag sits in the top-right slot, so
+     move the running-flag to the LEFT side of that slot. */
+  .job-card.hot.active .running-flag {
+    right: auto;
+    left: 14px;
+  }
+
+  .hot-flag {
+    position: absolute;
+    top: 12px; right: 14px;
+    background: var(--hot);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    padding: 4px 10px;
+    border-radius: 3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+  }
+  .hot-flag svg { width: 12px; height: 12px; }
+
+  .job-num-block {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid var(--border);
+    padding-right: 14px;
+  }
+  .job-num-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .job-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    margin-top: 4px;
+    line-height: 1;
+  }
+  .job-asm {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--ink-3);
+    margin-top: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    border-radius: 2px;
+    align-self: flex-start;
+  }
+
+  .job-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .job-part-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .job-part {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .job-rev {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-2);
+    background: var(--bg-3);
+    padding: 2px 7px;
+    border-radius: 2px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+  }
+  .job-desc {
+    font-family: 'Manrope', sans-serif;
+    font-size: 14px;
+    color: var(--ink-2);
+    line-height: 1.35;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .job-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.04em;
+  }
+  .job-meta-row > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .job-meta-row strong {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .meta-dot {
+    width: 3px; height: 3px;
+    background: var(--ink-4);
+    border-radius: 50%;
+    align-self: center;
+  }
+
+  .job-dates {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+    text-align: right;
+    min-width: 140px;
+  }
+  .date-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+  .date-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .date-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: 0;
+  }
+  .date-value.late { color: var(--red-bright); }
+
+  .late-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--red-deep);
+    color: var(--red-bright);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    padding: 5px 9px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .late-badge::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    background: var(--red-bright);
+    border-radius: 50%;
+  }
+  .late-badge.critical {
+    background: var(--red);
+    border-color: var(--red);
+    color: var(--ink);
+  }
+  .late-badge.critical::before {
+    background: var(--ink);
+    animation: blink 1.5s ease-in-out infinite;
+  }
+
+  /* HOT TOGGLE BUTTON (admin mode only) */
+  .hot-toggle {
+    display: none;
+    appearance: none;
+    border: 1px solid var(--hot);
+    background: transparent;
+    color: var(--hot);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    padding: 9px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+    margin-top: 8px;
+    align-self: flex-end;
+  }
+  .hot-toggle svg { width: 13px; height: 13px; }
+  .hot-toggle:active { transform: scale(0.95); }
+  .hot-toggle.on {
+    background: var(--hot);
+    color: var(--ink);
+  }
+  body.admin .hot-toggle { display: inline-flex; }
+
+  /* EMPTY STATE */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--ink-3);
+  }
+  .empty-mark {
+    font-family: 'Anton', sans-serif;
+    font-size: 96px;
+    font-weight: 400;
+    color: var(--ink-4);
+    letter-spacing: 0.04em;
+    line-height: 1;
+  }
+  .empty-text {
+    font-family: 'Manrope', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-3);
+    margin-top: 16px;
+  }
+
+  /* PIN MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    animation: overlayIn 0.2s ease-out;
+  }
+  .modal-overlay.show { display: flex; }
+  @keyframes overlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .modal {
+    background: var(--bg-1);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 32px;
+    max-width: 380px;
+    width: calc(100% - 40px);
+    box-shadow: var(--shadow-lg);
+    animation: modalIn 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    position: relative;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .modal-title {
+    font-family: 'Anton', sans-serif;
+    font-weight: 400;
+    font-size: 32px;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    color: var(--ink);
+    text-transform: uppercase;
+  }
+  .modal-subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 8px;
+  }
+  .pin-display {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 28px 0;
+  }
+  .pin-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--bg-3);
+    border: 1px solid var(--border-strong);
+    transition: all 0.15s;
+  }
+  .pin-dot.filled {
+    background: var(--red);
+    border-color: var(--red);
+    transform: scale(1.15);
+  }
+  .pin-error .pin-dot {
+    border-color: var(--red);
+    animation: shake 0.4s;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .key {
+    appearance: none;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-2);
+    font-family: 'Anton', sans-serif;
+    font-weight: 400;
+    font-size: 28px;
+    color: var(--ink);
+    padding: 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.1s;
+    min-height: 64px;
+  }
+  .key:hover { border-color: var(--ink-3); }
+  .key:active {
+    background: var(--bg-3);
+    transform: scale(0.96);
+  }
+  .key.special {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-2);
+  }
+  .modal-error {
+    color: var(--red-bright);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: center;
+    margin-top: 14px;
+    height: 14px;
+  }
+  .pin-hint {
+    font-size: 11px;
+    color: var(--ink-3);
+    text-align: center;
+    margin-top: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .pin-hint code {
+    background: var(--bg-3);
+    padding: 2px 8px;
+    border-radius: 3px;
+    color: var(--ink-2);
+    font-weight: 600;
+    border: 1px solid var(--border-strong);
+    margin-left: 4px;
+  }
+
+  /* CAPACITY CHIP on op tiles (admin mode only) */
+  .cap-chip {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  body.admin .cap-chip { display: inline-flex; }
+  .cap-chip:hover {
+    border-color: var(--yellow);
+    color: var(--ink-2);
+  }
+  .cap-chip.custom {
+    border-color: var(--border-strong);
+    color: var(--yellow);
+    background: rgba(224, 169, 58, 0.06);
+  }
+  .cap-chip.custom:hover {
+    border-color: var(--yellow);
+  }
+  .cap-chip-label { color: var(--ink-3); }
+  .cap-chip.custom .cap-chip-label { color: var(--ink-2); }
+  .cap-chip-val {
+    color: var(--ink);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .cap-chip.custom .cap-chip-val { color: var(--yellow); }
+  .cap-chip-edit {
+    width: 11px; height: 11px;
+    opacity: 0.6;
+  }
+  .cap-chip:hover .cap-chip-edit { opacity: 1; }
+
+  /* CAPACITY EDITOR — inline replacement for the chip while editing */
+  .cap-edit {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    padding: 4px 6px;
+    background: var(--bg-2);
+    border: 1px solid var(--yellow);
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .cap-edit-btn {
+    appearance: none;
+    border: none;
+    background: var(--bg-3);
+    color: var(--ink);
+    width: 28px; height: 28px;
+    border-radius: 3px;
+    font-family: 'Anton', sans-serif;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s;
+    flex-shrink: 0;
+  }
+  .cap-edit-btn:hover { background: var(--bg-4); }
+  .cap-edit-btn:active { transform: scale(0.94); }
+  .cap-edit-btn.save {
+    background: var(--yellow);
+    color: var(--bg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .cap-edit-btn.save:hover { background: #e8b84a; }
+  .cap-edit-btn.reset {
+    background: transparent;
+    color: var(--ink-3);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    width: auto;
+    padding: 0 8px;
+    border: 1px solid var(--border-strong);
+  }
+  .cap-edit-btn.reset:hover { color: var(--ink); border-color: var(--ink-3); }
+  .cap-edit-input {
+    appearance: none;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-1);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    width: 56px;
+    padding: 5px 4px;
+    border-radius: 3px;
+    outline: none;
+    -moz-appearance: textfield;
+    font-variant-numeric: tabular-nums;
+  }
+  .cap-edit-input::-webkit-outer-spin-button,
+  .cap-edit-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .cap-edit-input:focus { border-color: var(--yellow); }
+  .cap-edit-suffix {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 4px 0 2px;
+  }
+
+  /* OPERATOR MODE: order itself communicates urgency.
+     Lateness highlighting is for planners — strip it for operators. */
+  body:not(.admin) .op-tile.has-late,
+  body:not(.admin) .op-tile.all-late {
+    border-color: var(--border);
+    background: var(--bg-1);
+  }
+  body:not(.admin) .op-tile.all-late .op-code {
+    color: var(--ink-3);
+  }
+  body:not(.admin) .op-late-pill {
+    display: none;
+  }
+  body:not(.admin) .job-card.late,
+  body:not(.admin) .job-card.critical {
+    border-color: var(--border);
+    border-left-color: var(--ok);
+    background: var(--bg-1);
+  }
+  body:not(.admin) .late-badge:not([style*="yellow"]) {
+    display: none;
+  }
+  body:not(.admin) .date-value.late {
+    color: var(--ink);
+  }
+
+  /* QUEUE SCHEDULER (admin mode only) */
+  .queue-forecast {
+    display: none;
+    margin-top: 14px;
+    padding: 14px 18px;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--yellow);
+    border-radius: 4px;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  body.admin .queue-forecast { display: flex; }
+  .qf-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--yellow);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .qf-eyebrow::before {
+    content: "";
+    width: 7px; height: 7px;
+    background: var(--yellow);
+    border-radius: 50%;
+  }
+  .qf-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    border-left: 1px solid var(--border);
+    padding-left: 14px;
+  }
+  .qf-stat-num {
+    font-family: 'Anton', sans-serif;
+    font-size: 22px;
+    color: var(--ink);
+    letter-spacing: 0.01em;
+    line-height: 1;
+  }
+  .qf-stat-num.accent { color: var(--yellow); }
+  .qf-stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .qf-rule {
+    margin-left: auto;
+    font-family: 'Manrope', sans-serif;
+    font-size: 12px;
+    color: var(--ink-3);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* ADMIN-ONLY card extras */
+  .queue-pos {
+    display: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    color: var(--yellow);
+    margin-top: 8px;
+    padding: 3px 6px;
+    border: 1px solid var(--yellow);
+    border-radius: 2px;
+    align-self: flex-start;
+    background: rgba(255,184,0,0.06);
+  }
+  body.admin .queue-pos { display: inline-flex; }
+
+  .eta-block {
+    display: none;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    padding-top: 6px;
+    margin-top: 4px;
+    border-top: 1px dashed var(--border-strong);
+  }
+  body.admin .eta-block { display: flex; }
+  .eta-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--yellow);
+  }
+  .eta-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--yellow);
+    letter-spacing: 0;
+  }
+
+  @media (max-width: 760px) {
+    .eta-block { align-items: flex-start; }
+    .qf-stat { padding-left: 10px; }
+  }
+
+  /* RESPONSIVE - PORTRAIT TABLET / SMALLER */
+  @media (max-width: 760px) {
+    .topbar { padding: 14px 18px; }
+    .brand { font-size: 24px; gap: 10px; }
+    .brand-dot { width: 10px; height: 10px; }
+    .ops-header { padding: 30px 18px 16px; }
+    .ops-header::before { left: 18px; }
+    .ops-grid { padding: 0 18px 32px; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+    .op-tile { padding: 16px; min-height: 120px; }
+    .op-desc { font-size: 18px; }
+    .op-count-num { font-size: 26px; }
+    .jobs-header { padding: 18px 18px 12px; }
+    .job-list { padding: 16px 18px 40px; }
+    .job-card { 
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .job-num-block {
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      padding-right: 0;
+      padding-bottom: 10px;
+    }
+    .job-num-label { display: none; }
+    .job-num { font-size: 18px; }
+    .job-asm { margin-top: 0; margin-left: auto; }
+    .job-dates {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: flex-start;
+      min-width: 0;
+      gap: 16px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+    .date-block { align-items: flex-start; }
+    .hot-flag { position: static; align-self: flex-end; }
+    .job-card.hot { padding-top: 20px; }
+    .date-stamp-day { font-size: 10px; }
+    .date-stamp-date { font-size: 12px; }
+    .stat { padding: 10px 14px; min-width: 80px; }
+    .stat-num { font-size: 32px; }
+  }
+
+  @media (max-width: 480px) {
+    .ops-summary { gap: 0; }
+    .stat-num { font-size: 26px; }
+    .ops-grid { grid-template-columns: 1fr 1fr; }
+    .ops-summary { width: 100%; }
+    .stat { flex: 1; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        Shop Floor <span class="brand-live">Live</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="date-stamp">
+        <div class="date-stamp-day" id="dayName">&mdash;</div>
+        <div class="date-stamp-date" id="dateStr">&mdash;</div>
+      </div>
+      <button class="lock-btn" id="lockBtn" aria-label="Admin lock" title="Planner Admin">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </button>
+      <button class="admin-pill" id="adminPill" style="display:none">
+        <span class="admin-dot"></span>
+        Admin
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;margin-left:2px"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+  </header>
+  <div class="admin-banner" id="adminBanner">
+    Admin Active <span>&middot; Tap "Mark HOT" on any job to escalate</span>
+  </div>
+  <main class="main" id="main"></main>
+</div>
+
+<!-- PIN MODAL -->
+<div class="modal-overlay" id="pinModal">
+  <div class="modal">
+    <div class="modal-subtitle">Authorized Personnel</div>
+    <div class="modal-title">Enter Admin PIN</div>
+    <div class="pin-display" id="pinDisplay">
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+    </div>
+    <div class="keypad">
+      <button class="key" data-key="1">1</button>
+      <button class="key" data-key="2">2</button>
+      <button class="key" data-key="3">3</button>
+      <button class="key" data-key="4">4</button>
+      <button class="key" data-key="5">5</button>
+      <button class="key" data-key="6">6</button>
+      <button class="key" data-key="7">7</button>
+      <button class="key" data-key="8">8</button>
+      <button class="key" data-key="9">9</button>
+      <button class="key special" data-key="cancel">Cancel</button>
+      <button class="key" data-key="0">0</button>
+      <button class="key special" data-key="del">&larr;</button>
+    </div>
+    <div class="modal-error" id="modalError"></div>
+    <div class="pin-hint">Default <code>258036</code></div>
+  </div>
+</div>
+
+<script>
+// Data is fetched from /api/jobs (nginx proxies to Epicor BAQ).
+// The proxy injects Basic Auth + API key from server-side env vars,
+// so credentials never reach the browser.
+let DATA = [];
+
+// Friendly names for planner codes (JobHead_PersonID). Edit as needed.
+const PLANNER_NAMES = {
+  'MPFAB':   'T83 Mass Production Fab',
+  'T83CORE': 'T83 Core Part Planning',
+  'S58CORE': 'S58 Core Part Planning',
+  'GASM':    'Standard Assembly',
+  'PCBA':    'PCBA Planner',
+  'SHIELD':  'Shield Planner',
+  'OEM':     'OEM Planner'
+};
+
+function transformEpicorRecord(r) {
+  const isoDate = (s) => s ? String(s).split('T')[0] : '';
+  return {
+    job: r.JobHead_JobNum || '',
+    asm: r.JobAsmbl_AssemblySeq != null ? r.JobAsmbl_AssemblySeq : 0,
+    part: r.JobHead_PartNum || '',
+    rev: r.JobHead_RevisionNum || '',
+    desc: r.JobHead_PartDescription || '',
+    qty: r.JobAsmbl_RequiredQty != null ? r.JobAsmbl_RequiredQty : 0,
+    prodQty: r.JobHead_ProdQty != null ? r.JobHead_ProdQty : 0,
+    start: isoDate(r.JobAsmbl_StartDate),
+    due: isoDate(r.JobAsmbl_DueDate),
+    op: r.JobOperInfo_OpCode || '',
+    opDesc: r.OpMaster_OpDesc || r.JobOperInfo_OpCode || '',
+    opSeq: r.Calculated_MinOprSeq != null ? r.Calculated_MinOprSeq : 0,
+    totalOps: r.Calculated_NbrOpr != null ? r.Calculated_NbrOpr : 0,
+    doneOps: r.Calculated_NbrOfCompletedOprs != null ? r.Calculated_NbrOfCompletedOprs : 0,
+    hours: r.JobOperInfo_EstProdHours != null ? r.JobOperInfo_EstProdHours : 0,
+    // Planner code from BAQ (JobHead_PersonID). Friendly name from PLANNER_NAMES lookup.
+    plannerId: r.JobHead_PersonID || '',
+    plannerName: PLANNER_NAMES[r.JobHead_PersonID] || r.JobHead_PersonID || '',
+    subcontract: !!r.OpMaster_Subcontract,
+    active: !!r.LaborDtl_ActiveTrans
+  };
+}
+
+async function fetchEpicorJobs() {
+  const resp = await fetch('/api/jobs', { credentials: 'omit', cache: 'no-store' });
+  if (!resp.ok) {
+    throw new Error('HTTP ' + resp.status + ' fetching /api/jobs');
+  }
+  const json = await resp.json();
+  const records = (json && Array.isArray(json.value)) ? json.value : [];
+  return records.map(transformEpicorRecord);
+}
+
+const STORAGE_KEY = 'nextop_hot_jobs';
+const PIN_KEY = 'nextop_admin_pin';
+const DEFAULT_PIN = '258036';
+const PIN_LENGTH = 6;
+
+function getPin() {
+  try {
+    const stored = localStorage.getItem(PIN_KEY);
+    if (stored && stored.length === PIN_LENGTH) return stored;
+    return DEFAULT_PIN;
+  } catch(e) { return DEFAULT_PIN; }
+}
+function loadHot() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch(e) { return new Set(); }
+}
+function saveHot(set) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(set))); } catch(e) {}
+}
+
+const hotSet = loadHot();
+
+function jobKey(j) { return j.job + '|' + j.asm + '|' + j.op; }
+
+const today = new Date();
+today.setHours(0,0,0,0);
+
+(function(){
+  const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  document.getElementById('dayName').textContent = days[today.getDay()];
+  document.getElementById('dateStr').textContent =
+    months[today.getMonth()] + ' ' + String(today.getDate()).padStart(2,'0') + ' ' + today.getFullYear();
+})();
+
+function parseDate(s) {
+  if (!s) return null;
+  const [y,m,d] = s.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+function daysBetween(a, b) {
+  return Math.round((a - b) / 86400000);
+}
+function formatDate(d) {
+  if (!d) return '\u2014';
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  return months[d.getMonth()] + ' ' + String(d.getDate()).padStart(2,'0') + " '" + String(d.getFullYear()).slice(2);
+}
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function preprocessData() {
+  DATA.forEach(j => {
+    j._key = jobKey(j);
+    j._start = parseDate(j.start);
+    j._due = parseDate(j.due);
+    j._daysToStart = j._start ? daysBetween(j._start, today) : null;
+    j._daysToDue = j._due ? daysBetween(j._due, today) : null;
+    j._lateStart = j._daysToStart != null && j._daysToStart < 0;
+    j._pastDue = j._daysToDue != null && j._daysToDue < 0;
+    j._critical = j._lateStart && j._pastDue;
+    j._active = !!j.active;
+  });
+}
+
+function isHot(j) { return hotSet.has(j._key); }
+function toggleHot(j) {
+  if (isHot(j)) hotSet.delete(j._key);
+  else hotSet.add(j._key);
+  saveHot(hotSet);
+}
+
+// Queue scheduling: HOT first, then by start date.
+// 40 min setup + estimated production hours per job, Mon-Fri only.
+// Each op has its own daily-hours rate (defaulting to 8) — admin-editable.
+const SETUP_HOURS = 40 / 60;
+const DEFAULT_HOURS_PER_DAY = 8;
+const MIN_HOURS_PER_DAY = 1;
+const MAX_HOURS_PER_DAY = 1000;
+const OP_HOURS_KEY = 'nextop_op_hours';
+
+function loadOpHours() {
+  try {
+    const raw = localStorage.getItem(OP_HOURS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch(e) { return {}; }
+}
+function saveOpHours(map) {
+  try { localStorage.setItem(OP_HOURS_KEY, JSON.stringify(map)); } catch(e) {}
+}
+const opHours = loadOpHours();
+
+function getOpHours(opCode) {
+  const v = opHours[opCode];
+  if (typeof v === 'number' && v >= MIN_HOURS_PER_DAY && v <= MAX_HOURS_PER_DAY) return v;
+  return DEFAULT_HOURS_PER_DAY;
+}
+function setOpHours(opCode, hours) {
+  const clamped = Math.max(MIN_HOURS_PER_DAY, Math.min(MAX_HOURS_PER_DAY, hours));
+  if (clamped === DEFAULT_HOURS_PER_DAY) {
+    delete opHours[opCode];
+  } else {
+    opHours[opCode] = clamped;
+  }
+  saveOpHours(opHours);
+}
+function resetOpHours(opCode) {
+  delete opHours[opCode];
+  saveOpHours(opHours);
+}
+
+// Skip weekends when projecting ETAs. This is what makes the Queue Forecast
+// (and per-job ETAs) Mon-Fri only: addWorkDays(today, n) = today + n weekdays,
+// jumping over Saturday and Sunday. If `start` itself is a weekend, advance to
+// the next weekday before counting.
+function addWorkDays(start, days) {
+  const d = new Date(start);
+  // If start is a weekend, advance to next Monday
+  while (d.getDay() === 0 || d.getDay() === 6) {
+    d.setDate(d.getDate() + 1);
+  }
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) added++;
+  }
+  return d;
+}
+
+function computeSchedule(sortedJobs, hoursPerDay) {
+  // sortedJobs is already in priority order (HOT first, then by start date)
+  const hpd = hoursPerDay || DEFAULT_HOURS_PER_DAY;
+  const map = new Map();
+  let cumHours = 0;
+  sortedJobs.forEach((j, idx) => {
+    const jobHours = SETUP_HOURS + (j.hours || 0);
+    cumHours += jobHours;
+    // Day offset: which work day from today does this finish on?
+    const dayOffset = Math.max(0, Math.ceil(cumHours / hpd) - 1);
+    const eta = addWorkDays(today, dayOffset);
+    map.set(j._key, {
+      position: idx + 1,
+      eta: eta,
+      jobHours: jobHours,
+      cumHours: cumHours
+    });
+  });
+  return map;
+}
+
+function buildOps() {
+  const map = new Map();
+  DATA.forEach(j => {
+    const key = j.op || 'UNKNOWN';
+    if (!map.has(key)) {
+      map.set(key, { code: key, desc: j.opDesc || key, jobs: [] });
+    }
+    map.get(key).jobs.push(j);
+  });
+  for (const op of map.values()) {
+    op.lateCount = op.jobs.filter(j => j._lateStart).length;
+    op.hotCount = op.jobs.filter(j => isHot(j)).length;
+    op.activeCount = op.jobs.filter(j => j._active).length;
+  }
+  return map;
+}
+
+const state = {
+  view: 'ops',
+  selectedOp: null,
+  filterLate: false,
+  filterHot: false,
+  search: '',
+  admin: false,
+  editingCapacityOp: null
+};
+
+const main = document.getElementById('main');
+
+function render() {
+  document.body.classList.toggle('admin', state.admin);
+  document.getElementById('lockBtn').style.display = state.admin ? 'none' : 'inline-flex';
+  document.getElementById('adminPill').style.display = state.admin ? 'inline-flex' : 'none';
+  if (state.view === 'ops') renderOps();
+  else renderJobs();
+}
+
+function renderOps() {
+  const opMap = buildOps();
+  const operations = Array.from(opMap.values()).sort((a,b) => {
+    if (b.hotCount !== a.hotCount) return b.hotCount - a.hotCount;
+    if (b.activeCount !== a.activeCount) return b.activeCount - a.activeCount;
+    if (b.lateCount !== a.lateCount) return b.lateCount - a.lateCount;
+    if (b.jobs.length !== a.jobs.length) return b.jobs.length - a.jobs.length;
+    return a.desc.localeCompare(b.desc);
+  });
+
+  const totalJobs = DATA.length;
+  const totalLate = DATA.filter(j => j._lateStart).length;
+  const totalHot = DATA.filter(j => isHot(j)).length;
+
+  const html = `
+    <div class="view">
+      <div class="ops-header">
+        <div>
+          <div class="ops-title">Pick an <em>operation</em></div>
+          <div class="filter-note">Showing <strong>MPFAB</strong> &middot; <strong>T83CORE</strong> planners</div>
+        </div>
+        <div class="ops-summary">
+          ${totalHot > 0 ? `
+            <div class="stat hot">
+              <div class="stat-num">${totalHot}</div>
+              <div class="stat-label">HOT</div>
+            </div>
+          ` : ''}
+          <div class="stat">
+            <div class="stat-num">${totalJobs}</div>
+            <div class="stat-label">Open</div>
+          </div>
+          <div class="stat late">
+            <div class="stat-num">${totalLate}</div>
+            <div class="stat-label">Late</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num">${operations.length}</div>
+            <div class="stat-label">Ops</div>
+          </div>
+        </div>
+      </div>
+      <div class="ops-instruction">Sorted by urgency &mdash; HOT and in-progress items surface first</div>
+      <div class="ops-grid">
+        ${operations.map(op => {
+          const allLate = op.lateCount === op.jobs.length && op.jobs.length > 0;
+          const hasLate = op.lateCount > 0;
+          const hasHot = op.hotCount > 0;
+          const hasRunning = op.activeCount > 0;
+          const classes = [];
+          if (hasHot) classes.push('has-hot');
+          else if (allLate) classes.push('all-late');
+          else if (hasLate) classes.push('has-late');
+          if (hasRunning) classes.push('has-running');
+          const cls = classes.join(' ');
+          const capacity = getOpHours(op.code);
+          const isCustom = capacity !== DEFAULT_HOURS_PER_DAY;
+          const isEditing = state.editingCapacityOp === op.code;
+          return `
+            <div class="op-tile ${cls}" data-op="${escapeHtml(op.code)}" role="button" tabindex="0">
+              ${hasHot ? `
+                <div class="op-tile-flag">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/></svg>
+                  ${op.hotCount} HOT
+                </div>
+              ` : ''}
+              <div class="op-code">${escapeHtml(op.code)}</div>
+              <div class="op-desc">${escapeHtml(op.desc)}</div>
+              <div class="op-meta">
+                <div class="op-count">
+                  <span class="op-count-num">${op.jobs.length}</span>
+                  <span class="op-count-label">job${op.jobs.length===1?'':'s'}</span>
+                </div>
+                ${hasRunning ? `<span class="op-running-pill">${op.activeCount} running</span>` : (op.lateCount > 0 && !hasHot ? `<span class="op-late-pill">${op.lateCount} late</span>` : '')}
+              </div>
+              ${isEditing ? `
+                <div class="cap-edit" data-op="${escapeHtml(op.code)}">
+                  <button class="cap-edit-btn" data-cap-action="dec" title="−1">−</button>
+                  <input class="cap-edit-input" type="number" inputmode="numeric" min="${MIN_HOURS_PER_DAY}" max="${MAX_HOURS_PER_DAY}" value="${capacity}" data-cap-input>
+                  <span class="cap-edit-suffix">hr/day</span>
+                  <button class="cap-edit-btn" data-cap-action="inc" title="+1">+</button>
+                  ${isCustom ? `<button class="cap-edit-btn reset" data-cap-action="reset" title="Reset to ${DEFAULT_HOURS_PER_DAY}">Reset</button>` : ''}
+                  <button class="cap-edit-btn save" data-cap-action="save" title="Save">✓</button>
+                </div>
+              ` : `
+                <div class="cap-chip ${isCustom ? 'custom' : ''}" data-cap-op="${escapeHtml(op.code)}" role="button" tabindex="0">
+                  <span class="cap-chip-label">Capacity</span>
+                  <span class="cap-chip-val">${capacity}</span>
+                  <span class="cap-chip-label">hr/day</span>
+                  <svg class="cap-chip-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                </div>
+              `}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+  main.innerHTML = html;
+  main.scrollTop = 0;
+
+  // If we're in the middle of editing capacity, focus the input
+  if (state.editingCapacityOp) {
+    const input = main.querySelector('.cap-edit-input');
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  }
+
+  // Tile click → drill into jobs view, but ignore clicks on capacity controls
+  main.querySelectorAll('.op-tile').forEach(tile => {
+    tile.addEventListener('click', (e) => {
+      // Ignore clicks that originate from inside the capacity chip or editor
+      if (e.target.closest('.cap-chip') || e.target.closest('.cap-edit')) return;
+      state.selectedOp = tile.dataset.op;
+      state.filterLate = false;
+      state.filterHot = false;
+      state.search = '';
+      state.editingCapacityOp = null;
+      state.view = 'jobs';
+      render();
+    });
+    tile.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target === tile) {
+        e.preventDefault();
+        tile.click();
+      }
+    });
+  });
+
+  // Capacity chip → enter edit mode for that op
+  main.querySelectorAll('.cap-chip').forEach(chip => {
+    const handle = (e) => {
+      e.stopPropagation();
+      state.editingCapacityOp = chip.dataset.capOp;
+      render();
+    };
+    chip.addEventListener('click', handle);
+    chip.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handle(e);
+      }
+    });
+  });
+
+  // Capacity editor → +/−/save/reset
+  main.querySelectorAll('.cap-edit').forEach(box => {
+    const opCode = box.dataset.op;
+    const input = box.querySelector('.cap-edit-input');
+
+    const clamp = (n) => Math.max(MIN_HOURS_PER_DAY, Math.min(MAX_HOURS_PER_DAY, n));
+    const readVal = () => {
+      const n = parseInt(input.value, 10);
+      return isNaN(n) ? DEFAULT_HOURS_PER_DAY : clamp(n);
+    };
+    const commit = (val) => {
+      setOpHours(opCode, val);
+      state.editingCapacityOp = null;
+      render();
+    };
+
+    box.querySelectorAll('[data-cap-action]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = btn.dataset.capAction;
+        if (action === 'inc') input.value = clamp(readVal() + 1);
+        else if (action === 'dec') input.value = clamp(readVal() - 1);
+        else if (action === 'save') commit(readVal());
+        else if (action === 'reset') {
+          resetOpHours(opCode);
+          state.editingCapacityOp = null;
+          render();
+        }
+      });
+    });
+
+    // Stop bubbling on the editor itself so clicks inside don't trigger tile click
+    box.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        commit(readVal());
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        state.editingCapacityOp = null;
+        render();
+      }
+    });
+    input.addEventListener('input', () => {
+      // Soft-clamp on input — let user type freely, just snap to range
+      const n = parseInt(input.value, 10);
+      if (!isNaN(n) && n > MAX_HOURS_PER_DAY) input.value = MAX_HOURS_PER_DAY;
+    });
+  });
+}
+
+function renderJobs() {
+  const opMap = buildOps();
+  const op = opMap.get(state.selectedOp);
+  if (!op) { state.view = 'ops'; renderOps(); return; }
+
+  let jobs = op.jobs.slice();
+  if (state.filterLate) jobs = jobs.filter(j => j._lateStart);
+  if (state.filterHot) jobs = jobs.filter(j => isHot(j));
+  if (state.search) {
+    const q = state.search.toLowerCase();
+    jobs = jobs.filter(j =>
+      j.job.toLowerCase().includes(q) ||
+      (j.part || '').toLowerCase().includes(q) ||
+      (j.desc || '').toLowerCase().includes(q)
+    );
+  }
+  // Sort priority: HOT > active > start-date.
+  // Active jobs surface within their HOT or non-HOT band so operators see what's
+  // running first.
+  const sortQueue = (a, b) => {
+    const ha = isHot(a), hb = isHot(b);
+    if (ha !== hb) return hb - ha;
+    if (a._active !== b._active) return b._active - a._active;
+    if (!a._start && !b._start) return 0;
+    if (!a._start) return 1;
+    if (!b._start) return -1;
+    return a._start - b._start;
+  };
+  jobs.sort(sortQueue);
+
+  // Compute queue schedule based on full op queue (not filtered) so positions stay stable
+  const fullSorted = op.jobs.slice().sort(sortQueue);
+  const opCapacity = getOpHours(op.code);
+  const schedule = computeSchedule(fullSorted, opCapacity);
+
+  const visibleLate = jobs.filter(j => j._lateStart).length;
+  const visibleHot = jobs.filter(j => isHot(j)).length;
+  const visibleActive = jobs.filter(j => j._active).length;
+
+  // Three sections: Running (active) → Hot (HOT but not yet active) → Queue (everything else).
+  // This mirrors operator mental model: "what's in motion, what to jump on next, what's queued."
+  const runningJobs = jobs.filter(j => j._active);
+  const hotQueueJobs = jobs.filter(j => !j._active && isHot(j));
+  const queueJobs = jobs.filter(j => !j._active && !isHot(j));
+
+  const html = `
+    <div class="view">
+      <div class="jobs-header">
+        <div class="jobs-header-row">
+          <div class="jobs-header-left">
+            <button class="back-btn" id="backBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              Operations
+            </button>
+            <div class="jobs-title-block">
+              <div class="jobs-eyebrow">${escapeHtml(op.code)}</div>
+              <div class="jobs-title">${escapeHtml(op.desc)}</div>
+            </div>
+          </div>
+          <div class="jobs-counts">
+            ${visibleHot > 0 ? `
+              <div class="jobs-count hot">
+                <strong>${visibleHot}</strong>
+                Hot
+              </div>
+            ` : ''}
+            <div class="jobs-count">
+              <strong>${jobs.length}</strong>
+              Show
+            </div>
+            <div class="jobs-count late">
+              <strong>${visibleLate}</strong>
+              Late
+            </div>
+          </div>
+        </div>
+        <div class="queue-forecast" id="queueForecast"></div>
+        <div class="filter-bar">
+          <button class="filter-chip ${!state.filterLate && !state.filterHot ? 'active' : ''}" data-filter="all">All</button>
+          ${op.hotCount > 0 ? `<button class="filter-chip hot ${state.filterHot ? 'active' : ''}" data-filter="hot">\ud83d\udd25 Hot Only</button>` : ''}
+          <button class="filter-chip late ${state.filterLate ? 'active' : ''}" data-filter="late">Late Only</button>
+          <input type="search" class="search-input" id="searchInput" placeholder="Search job # or part..." value="${escapeHtml(state.search)}">
+        </div>
+      </div>
+      <div class="job-list">
+        ${jobs.length === 0 ? `
+          <div class="empty">
+            <div class="empty-mark">\u00d7</div>
+            <div class="empty-text">No jobs match filter</div>
+          </div>
+        ` : (
+          (runningJobs.length > 0 ? `
+            <div class="list-divider running">
+              <span class="running-pulse"></span>
+              In Progress &middot; ${runningJobs.length}
+            </div>
+            ${runningJobs.map(j => renderJobCard(j, schedule.get(j._key))).join('')}
+          ` : '') +
+          (hotQueueJobs.length > 0 ? `
+            <div class="list-divider hot">\ud83d\udd25 HOT &middot; ${hotQueueJobs.length}</div>
+            ${hotQueueJobs.map(j => renderJobCard(j, schedule.get(j._key))).join('')}
+          ` : '') +
+          (queueJobs.length > 0 ? `
+            ${(runningJobs.length + hotQueueJobs.length) > 0 ? `<div class="list-divider">Up Next &middot; ${queueJobs.length}</div>` : ''}
+            ${queueJobs.map(j => renderJobCard(j, schedule.get(j._key))).join('')}
+          ` : '')
+        )}
+      </div>
+    </div>
+  `;
+  main.innerHTML = html;
+  main.scrollTop = 0;
+
+  // Render queue forecast in admin mode
+  const forecastEl = document.getElementById('queueForecast');
+  if (forecastEl && fullSorted.length > 0) {
+    const lastJob = fullSorted[fullSorted.length - 1];
+    const lastSched = schedule.get(lastJob._key);
+    const totalHours = lastSched ? lastSched.cumHours : 0;
+    const workDays = Math.max(1, Math.ceil(totalHours / opCapacity));
+    const isCustom = opCapacity !== DEFAULT_HOURS_PER_DAY;
+    forecastEl.innerHTML = `
+      <span class="qf-eyebrow">Queue Forecast</span>
+      <div class="qf-stat">
+        <span class="qf-stat-num">${fullSorted.length}</span>
+        <span class="qf-stat-label">Jobs</span>
+      </div>
+      <div class="qf-stat">
+        <span class="qf-stat-num">${totalHours.toFixed(1)}</span>
+        <span class="qf-stat-label">Hours</span>
+      </div>
+      <div class="qf-stat">
+        <span class="qf-stat-num">${workDays}</span>
+        <span class="qf-stat-label">Work Days</span>
+      </div>
+      <div class="qf-stat">
+        <span class="qf-stat-num accent">${formatDate(lastSched.eta)}</span>
+        <span class="qf-stat-label">Queue Clears</span>
+      </div>
+      <span class="qf-rule">Capacity ${isCustom ? `<strong>${opCapacity}</strong>` : opCapacity}hr/day &middot; 40min setup/job &middot; Mon&ndash;Fri (weekends excluded)</span>
+    `;
+  }
+
+  document.getElementById('backBtn').addEventListener('click', () => {
+    state.view = 'ops';
+    state.selectedOp = null;
+    render();
+  });
+  main.querySelectorAll('[data-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const f = btn.dataset.filter;
+      state.filterLate = f === 'late';
+      state.filterHot = f === 'hot';
+      render();
+    });
+  });
+  main.querySelectorAll('.hot-toggle').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const key = btn.dataset.key;
+      const j = DATA.find(x => x._key === key);
+      if (!j) return;
+      toggleHot(j);
+      render();
+    });
+  });
+  const search = document.getElementById('searchInput');
+  if (search) {
+    search.addEventListener('input', e => {
+      state.search = e.target.value;
+      const pos = e.target.selectionStart;
+      render();
+      const newSearch = document.getElementById('searchInput');
+      if (newSearch) {
+        newSearch.focus();
+        newSearch.setSelectionRange(pos, pos);
+      }
+    });
+  }
+}
+
+function renderJobCard(j, sched) {
+  const hot = isHot(j);
+  const active = j._active;
+  const cardClasses = [];
+  if (hot) cardClasses.push('hot');
+  else if (j._critical) cardClasses.push('critical');
+  else if (j._lateStart) cardClasses.push('late');
+  if (active) cardClasses.push('active');
+  let badge = '';
+  if (j._critical) {
+    const days = Math.abs(j._daysToDue);
+    badge = `<span class="late-badge critical">${days}d Past Due</span>`;
+  } else if (j._lateStart) {
+    const days = Math.abs(j._daysToStart);
+    badge = `<span class="late-badge">${days}d Late</span>`;
+  } else if (j._daysToStart === 0) {
+    badge = `<span class="late-badge" style="border-color:var(--yellow);color:var(--yellow)">Starts Today</span>`;
+  }
+
+  const startClass = j._lateStart ? 'late' : '';
+  const dueClass = j._pastDue ? 'late' : '';
+
+  const flameIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/></svg>';
+
+  return `
+    <div class="job-card ${cardClasses.join(' ')}">
+      ${hot ? `<span class="hot-flag">${flameIcon} HOT</span>` : ''}
+      ${active ? `<span class="running-flag"><span class="running-pulse"></span>Running</span>` : ''}
+      <div class="job-num-block">
+        <div>
+          <div class="job-num-label">Job</div>
+          <div class="job-num">${escapeHtml(j.job)}</div>
+        </div>
+        ${j.asm > 0 ? `<div class="job-asm">Asm ${j.asm}</div>` : ''}
+        ${sched ? `<div class="queue-pos">Q#${sched.position}</div>` : ''}
+      </div>
+      <div class="job-body">
+        <div class="job-part-row">
+          <span class="job-part">${escapeHtml(j.part)}</span>
+          ${j.rev ? `<span class="job-rev">Rev ${escapeHtml(j.rev)}</span>` : ''}
+        </div>
+        <div class="job-desc">${escapeHtml(j.desc)}</div>
+        <div class="job-meta-row">
+          <span><strong>${j.qty}</strong> req</span>
+          <span class="meta-dot"></span>
+          <span><strong>${j.hours}</strong> hr est</span>
+          <span class="meta-dot"></span>
+          <span>Op ${j.opSeq} of ${j.totalOps * 10}</span>
+          <span class="meta-dot"></span>
+          <span><strong>${j.doneOps}</strong>/${j.totalOps} done</span>
+          ${j.subcontract ? '<span class="meta-dot"></span><span style="color:var(--yellow);font-weight:700">Subcontract</span>' : ''}
+        </div>
+        <button class="hot-toggle ${hot ? 'on' : ''}" data-key="${escapeHtml(j._key)}">
+          ${flameIcon}
+          ${hot ? 'Unmark HOT' : 'Mark HOT'}
+        </button>
+      </div>
+      <div class="job-dates">
+        ${badge}
+        <div class="date-block">
+          <span class="date-label">Start</span>
+          <span class="date-value ${startClass}">${formatDate(j._start)}</span>
+        </div>
+        <div class="date-block">
+          <span class="date-label">Due</span>
+          <span class="date-value ${dueClass}">${formatDate(j._due)}</span>
+        </div>
+        ${sched ? `
+          <div class="eta-block">
+            <span class="eta-label">Est. Done</span>
+            <span class="eta-value">${formatDate(sched.eta)}</span>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+const pinModal = document.getElementById('pinModal');
+const pinDots = document.querySelectorAll('#pinDisplay .pin-dot');
+const modalError = document.getElementById('modalError');
+let pinBuffer = '';
+
+function showPinModal() {
+  pinBuffer = '';
+  updatePinDisplay();
+  modalError.textContent = '';
+  pinModal.classList.add('show');
+}
+function hidePinModal() {
+  pinModal.classList.remove('show');
+  pinBuffer = '';
+}
+function updatePinDisplay() {
+  pinDots.forEach((dot, i) => {
+    dot.classList.toggle('filled', i < pinBuffer.length);
+  });
+}
+function tryPin() {
+  if (pinBuffer === getPin()) {
+    hidePinModal();
+    state.admin = true;
+    render();
+  } else {
+    document.getElementById('pinDisplay').classList.add('pin-error');
+    modalError.textContent = 'Access Denied';
+    setTimeout(() => {
+      document.getElementById('pinDisplay').classList.remove('pin-error');
+      pinBuffer = '';
+      updatePinDisplay();
+    }, 500);
+  }
+}
+
+document.getElementById('lockBtn').addEventListener('click', showPinModal);
+document.getElementById('adminPill').addEventListener('click', () => {
+  state.admin = false;
+  state.editingCapacityOp = null;
+  render();
+});
+
+document.querySelectorAll('.keypad .key').forEach(key => {
+  key.addEventListener('click', () => {
+    const k = key.dataset.key;
+    if (k === 'cancel') {
+      hidePinModal();
+      return;
+    }
+    if (k === 'del') {
+      pinBuffer = pinBuffer.slice(0, -1);
+      updatePinDisplay();
+      modalError.textContent = '';
+      return;
+    }
+    if (pinBuffer.length < PIN_LENGTH) {
+      pinBuffer += k;
+      updatePinDisplay();
+      modalError.textContent = '';
+      if (pinBuffer.length === PIN_LENGTH) {
+        setTimeout(tryPin, 150);
+      }
+    }
+  });
+});
+
+pinModal.addEventListener('click', (e) => {
+  if (e.target === pinModal) hidePinModal();
+});
+
+async function init() {
+  const summaryEl = document.querySelector('.summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = '<div style="padding:12px;color:#999;font-size:14px;">Loading jobs from Epicor...</div>';
+  }
+  try {
+    DATA = await fetchEpicorJobs();
+    preprocessData();
+    render();
+  } catch (err) {
+    console.error('Failed to load jobs from Epicor:', err);
+    if (summaryEl) {
+      summaryEl.innerHTML = '<div style="padding:12px;color:#ff6b6b;font-size:14px;">'
+        + 'Could not load jobs from Epicor. ' + (err.message || err)
+        + '<br><span style="color:#999;font-size:12px;">Check the App Service log stream and the BAQ.</span></div>';
+    }
+  }
+}
+
+init();
+
+// Auto-refresh every 5 minutes so the shop floor display stays current.
+setInterval(async () => {
+  try {
+    DATA = await fetchEpicorJobs();
+    preprocessData();
+    render();
+  } catch (err) {
+    console.warn('Auto-refresh failed:', err);
+  }
+}, 5 * 60 * 1000);
+</script>
+</body>
+</html>

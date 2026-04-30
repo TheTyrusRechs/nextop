@@ -1,0 +1,22 @@
+# Run the app locally for testing before deploying.
+#
+#   1. Set EPICOR_URL and EPICOR_BASIC_AUTH below (or in a .env file)
+#   2. docker compose up --build
+#   3. open http://localhost:8080
+#
+services:
+  nextop:
+    build: .
+    image: nextop:local
+    container_name: nextop
+    ports:
+      - "8080:8080"
+    environment:
+      # Full Epicor BAQ URL including the ?api-key=... query string.
+      # Get the api-key from Epicor: System Setup -> Security -> API Key Maintenance.
+      EPICOR_URL: "${EPICOR_URL}"
+
+      # Base64-encoded "username:password" for the Epicor user that runs the BAQ.
+      # Generate with:   echo -n 'youruser:yourpass' | base64
+      EPICOR_BASIC_AUTH: "${EPICOR_BASIC_AUTH}"
+    restart: unless-stopped

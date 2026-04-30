@@ -1,0 +1,68 @@
+# nginx config template.
+#
+# At container startup, the nginx official image runs envsubst on every
+# *.template file in /etc/nginx/templates/ and writes the result to
+# /etc/nginx/conf.d/. So ${EPICOR_URL} and ${EPICOR_BASIC_AUTH} below
+# get replaced with the values from App Service environment variables.
+#
+# Required environment variables (set in App Service "Environment variables"):
+#   EPICOR_URL          Full BAQ URL including ?api-key=...
+#                       e.g. https://centralusdtapp08.epicorsaas.com/SaaS585/api/v2/odata/159751/BaqSvc/MO-OpenJobNextOp/Data?api-key=NEWKEY
+#   EPICOR_BASIC_AUTH   Base64-encoded "username:password" for Epicor
+
+server {
+    listen       8080 default_server;
+    listen       [::]:8080 default_server;
+    server_name  _;
+
+    root         /usr/share/nginx/html;
+    index        index.html;
+
+    # ---- Compression ----
+    gzip              on;
+    gzip_vary         on;
+    gzip_min_length   1024;
+    gzip_proxied      any;
+    gzip_comp_level   6;
+    gzip_types        text/plain text/css text/javascript application/javascript application/json image/svg+xml;
+
+    # ---- Security headers ----
+    add_header X-Frame-Options          "SAMEORIGIN"                              always;
+    add_header X-Content-Type-Options   "nosniff"                                 always;
+    add_header Referrer-Policy          "strict-origin-when-cross-origin"         always;
+    add_header Permissions-Policy       "geolocation=(), camera=(), microphone=()" always;
+
+    # ---- Health check ----
+    location = /health {
+        access_log off;
+        add_header Content-Type text/plain;
+        return 200 "ok\n";
+    }
+
+    # ---- Epicor BAQ proxy ----
+    # Browser fetches /api/jobs (same origin, no CORS).
+    # nginx forwards to Epicor with Basic Auth header injected from env vars.
+    # Credentials never reach the browser.
+    location = /api/jobs {
+        proxy_pass            ${EPICOR_URL};
+        proxy_set_header      Authorization "Basic ${EPICOR_BASIC_AUTH}";
+        proxy_set_header      Accept "application/json";
+        proxy_ssl_server_name on;
+        proxy_http_version    1.1;
+        # Hide upstream cookies from the browser
+        proxy_hide_header     Set-Cookie;
+        proxy_connect_timeout 10s;
+        proxy_read_timeout    30s;
+        # Don't pass App Service's incoming Host header to Epicor
+        proxy_set_header      Host $proxy_host;
+    }
+
+    # ---- Main app ----
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-cache, must-revalidate";
+    }
+
+    error_page 404 = /index.html;
+    server_tokens off;
+}
