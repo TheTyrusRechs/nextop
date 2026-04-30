@@ -309,6 +309,44 @@
     color: var(--ink-2);
     font-weight: 600;
   }
+  .site-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .site-filter-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-right: 2px;
+  }
+  .site-chip {
+    appearance: none;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--ink-2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 6px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .site-chip:hover { color: var(--ink); border-color: var(--ink-3); }
+  .site-chip:active { transform: scale(0.96); }
+  .site-chip.active {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--bg);
+  }
   .ops-summary {
     display: none;
     gap: 0;
@@ -762,7 +800,7 @@
     border: 1px solid var(--hot);
     border-left: 3px solid var(--hot);
     background: var(--bg-1);
-    padding-top: 26px;
+    padding-top: 38px;
     position: relative;
   }
   .job-card.hot::before {
@@ -779,7 +817,7 @@
     border-color: var(--ok);
     border-left-width: 4px;
     background: linear-gradient(90deg, rgba(93,190,126,0.07) 0%, var(--bg-1) 60%);
-    padding-top: 26px;
+    padding-top: 38px;
   }
   .job-card.active::before {
     content: "";
@@ -1637,6 +1675,8 @@ function transformEpicorRecord(r) {
     // Planner code from BAQ (JobHead_PersonID). Friendly name from PLANNER_NAMES lookup.
     plannerId: r.JobHead_PersonID || '',
     plannerName: PLANNER_NAMES[r.JobHead_PersonID] || r.JobHead_PersonID || '',
+    // Site / plant for the site filter (T83, C10, S58, etc.)
+    site: r.JobAsmbl_Plant || '',
     subcontract: !!r.OpMaster_Subcontract,
     active: !!r.LaborDtl_ActiveTrans
   };
@@ -1809,7 +1849,7 @@ function computeSchedule(sortedJobs, hoursPerDay) {
 
 function buildOps() {
   const map = new Map();
-  DATA.forEach(j => {
+  getActiveData().forEach(j => {
     const key = j.op || 'UNKNOWN';
     if (!map.has(key)) {
       map.set(key, { code: key, desc: j.opDesc || key, jobs: [] });
@@ -1829,10 +1869,29 @@ const state = {
   selectedOp: null,
   filterLate: false,
   filterHot: false,
+  filterSite: localStorage.getItem('nextop.filterSite') || 'all',
   search: '',
   admin: false,
   editingCapacityOp: null
 };
+
+// Returns DATA filtered by the currently selected site, or all data if 'all'.
+function getActiveData() {
+  if (state.filterSite === 'all') return DATA;
+  return DATA.filter(j => j.site === state.filterSite);
+}
+
+// Distinct sites present in the current data, sorted alphabetically.
+function getDistinctSites() {
+  const set = new Set();
+  DATA.forEach(j => { if (j.site) set.add(j.site); });
+  return Array.from(set).sort();
+}
+
+function setFilterSite(site) {
+  state.filterSite = site;
+  localStorage.setItem('nextop.filterSite', site);
+}
 
 const main = document.getElementById('main');
 
@@ -1854,15 +1913,29 @@ function renderOps() {
     return a.desc.localeCompare(b.desc);
   });
 
-  const totalJobs = DATA.length;
-  const totalLate = DATA.filter(j => j._lateStart).length;
-  const totalHot = DATA.filter(j => isHot(j)).length;
+  const activeData = getActiveData();
+  const totalJobs = activeData.length;
+  const totalLate = activeData.filter(j => j._lateStart).length;
+  const totalHot = activeData.filter(j => isHot(j)).length;
 
   const html = `
     <div class="view">
       <div class="ops-header">
         <div>
           <div class="ops-title">Pick an <em>operation</em></div>
+          ${(() => {
+            const sites = getDistinctSites();
+            if (sites.length <= 1) return '';
+            return `
+              <div class="site-filter">
+                <span class="site-filter-label">Site:</span>
+                <button class="site-chip ${state.filterSite === 'all' ? 'active' : ''}" data-site="all">All</button>
+                ${sites.map(s => `
+                  <button class="site-chip ${state.filterSite === s ? 'active' : ''}" data-site="${escapeHtml(s)}">${escapeHtml(s)}</button>
+                `).join('')}
+              </div>
+            `;
+          })()}
         </div>
         <div class="ops-summary">
           ${totalHot > 0 ? `
@@ -1971,6 +2044,14 @@ function renderOps() {
         e.preventDefault();
         tile.click();
       }
+    });
+  });
+
+  // Site filter chips
+  main.querySelectorAll('.site-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      setFilterSite(chip.dataset.site);
+      render();
     });
   });
 
