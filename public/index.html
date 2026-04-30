@@ -1675,8 +1675,14 @@ function transformEpicorRecord(r) {
     // Planner code from BAQ (JobHead_PersonID). Friendly name from PLANNER_NAMES lookup.
     plannerId: r.JobHead_PersonID || '',
     plannerName: PLANNER_NAMES[r.JobHead_PersonID] || r.JobHead_PersonID || '',
-    // Site / plant for the site filter (T83, C10, S58, etc.)
-    site: r.JobAsmbl_Plant || '',
+    // Site bucket: C10 if plant contains "C10", T83 if planner is MPFAB or T83CORE, else S58.
+    site: (() => {
+      const plant = r.JobAsmbl_Plant || '';
+      const planner = r.JobHead_PersonID || '';
+      if (plant.includes('C10')) return 'C10';
+      if (planner === 'MPFAB' || planner === 'T83CORE') return 'T83';
+      return 'S58';
+    })(),
     subcontract: !!r.OpMaster_Subcontract,
     active: !!r.LaborDtl_ActiveTrans
   };
@@ -1881,11 +1887,9 @@ function getActiveData() {
   return DATA.filter(j => j.site === state.filterSite);
 }
 
-// Distinct sites present in the current data, sorted alphabetically.
+// Hard-coded site filter buckets.
 function getDistinctSites() {
-  const set = new Set();
-  DATA.forEach(j => { if (j.site) set.add(j.site); });
-  return Array.from(set).sort();
+  return ['C10', 'T83', 'S58'];
 }
 
 function setFilterSite(site) {
