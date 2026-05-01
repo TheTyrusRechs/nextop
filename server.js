@@ -1,7 +1,8 @@
 'use strict';
-const http = require('http');
-const fs   = require('fs');
-const path = require('path');
+const http  = require('http');
+const https = require('https');
+const fs    = require('fs');
+const path  = require('path');
 
 const FILE = '/home/hot.json';
 let hotSet = new Set();
@@ -35,11 +36,84 @@ function readBody(req) {
   });
 }
 
+// ---- BAQ polling ----
+let jobsCache = null;   // parsed JSON from Epicor ({ value: [...], ... })
+let cachedAt  = null;   // Date of last successful poll
+
+function pollBaq() {
+  const epicorUrl  = process.env.EPICOR_URL;
+  const epicorAuth = process.env.EPICOR_BASIC_AUTH;
+
+  if (!epicorUrl || !epicorAuth) {
+    console.warn('BAQ poll: EPICOR_URL or EPICOR_BASIC_AUTH not set, skipping');
+    return;
+  }
+
+  console.log('BAQ poll: fetching...');
+  let parsed;
+  try { parsed = new URL(epicorUrl); } catch(e) {
+    console.error('BAQ poll: invalid EPICOR_URL:', e.message);
+    return;
+  }
+
+  const lib = parsed.protocol === 'https:' ? https : http;
+  const options = {
+    hostname: parsed.hostname,
+    port:     parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+    path:     parsed.pathname + (parsed.search || ''),
+    method:   'GET',
+    headers: {
+      'Authorization': 'Basic ' + epicorAuth,
+      'Accept': 'application/json',
+    },
+    timeout: 90000,
+  };
+
+  const req = lib.request(options, (res) => {
+    const chunks = [];
+    res.on('data', chunk => chunks.push(chunk));
+    res.on('end', () => {
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        console.error('BAQ poll: HTTP', res.statusCode);
+        return;
+      }
+      try {
+        const json = JSON.parse(Buffer.concat(chunks).toString());
+        jobsCache = json;
+        cachedAt  = new Date();
+        console.log('BAQ poll: cached', (json.value || []).length, 'records at', cachedAt.toISOString());
+      } catch(e) {
+        console.error('BAQ poll: parse error:', e.message);
+      }
+    });
+  });
+
+  req.on('error',   e => console.error('BAQ poll: error:', e.message));
+  req.on('timeout', () => { console.error('BAQ poll: timeout'); req.destroy(); });
+  req.end();
+}
+
+// Warm the cache immediately, then refresh every 5 minutes.
+pollBaq();
+setInterval(pollBaq, 5 * 60 * 1000);
+
+// ---- HTTP server ----
 const server = http.createServer(async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   const url = req.url.split('?')[0];
 
   try {
+    // GET /api/jobs — return cached BAQ data
+    if (req.method === 'GET' && url === '/api/jobs') {
+      if (!jobsCache) {
+        res.writeHead(503);
+        res.end(JSON.stringify({ error: 'cache warming', retryAfter: 10 }));
+        return;
+      }
+      res.end(JSON.stringify(Object.assign({}, jobsCache, { _cachedAt: cachedAt.toISOString() })));
+      return;
+    }
+
     // GET /api/hot — return current hot set
     if (req.method === 'GET' && url === '/api/hot') {
       res.end(JSON.stringify([...hotSet]));
@@ -62,8 +136,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // POST /api/hot/sync — client sends all current valid job keys;
-    // server prunes any hot entries no longer in the BAQ, returns surviving set.
+    // POST /api/hot/sync — prune hot keys no longer in the BAQ, return survivors
     if (req.method === 'POST' && url === '/api/hot/sync') {
       const validKeys = await readBody(req);
       if (Array.isArray(validKeys)) {

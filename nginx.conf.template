@@ -1,9 +1,8 @@
-# nginx config template.
+# nginx config.
 #
-# At container startup, the nginx official image runs envsubst on every
-# *.template file in /etc/nginx/templates/ and writes the result to
-# /etc/nginx/conf.d/. So ${EPICOR_URL} and ${EPICOR_BASIC_AUTH} below
-# get replaced with the values from App Service environment variables.
+# All /api/* requests are proxied to the Node.js server (127.0.0.1:3001).
+# The Node server polls the Epicor BAQ every 5 minutes and caches the result;
+# it reads EPICOR_URL and EPICOR_BASIC_AUTH directly from the container env.
 #
 # Required environment variables (set in App Service "Environment variables"):
 #   EPICOR_URL          Full BAQ URL including ?api-key=...
@@ -39,33 +38,15 @@ server {
         return 200 "ok\n";
     }
 
-    # ---- Shared hot-state API ----
-    # Proxied to the Node.js server running on 127.0.0.1:3001.
-    # Handles GET /api/hot, POST /api/hot/add, /api/hot/remove, /api/hot/sync.
-    location ~ ^/api/hot {
+    # ---- API proxy ----
+    # All /api/* routes handled by the Node.js server on 127.0.0.1:3001.
+    # Includes the hot-state API and /api/jobs (BAQ cache served from memory).
+    location ~ ^/api/ {
         proxy_pass            http://127.0.0.1:3001;
         proxy_http_version    1.1;
         proxy_set_header      Host $host;
         proxy_connect_timeout 3s;
-        proxy_read_timeout    5s;
-    }
-
-    # ---- Epicor BAQ proxy ----
-    # Browser fetches /api/jobs (same origin, no CORS).
-    # nginx forwards to Epicor with Basic Auth header injected from env vars.
-    # Credentials never reach the browser.
-    location = /api/jobs {
-        proxy_pass            ${EPICOR_URL};
-        proxy_set_header      Authorization "Basic ${EPICOR_BASIC_AUTH}";
-        proxy_set_header      Accept "application/json";
-        proxy_ssl_server_name on;
-        proxy_http_version    1.1;
-        # Hide upstream cookies from the browser
-        proxy_hide_header     Set-Cookie;
-        proxy_connect_timeout 10s;
-        proxy_read_timeout    30s;
-        # Don't pass App Service's incoming Host header to Epicor
-        proxy_set_header      Host $proxy_host;
+        proxy_read_timeout    10s;
     }
 
     # ---- Main app ----

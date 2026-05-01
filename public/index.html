@@ -1588,6 +1588,7 @@
       <div class="date-stamp">
         <div class="date-stamp-day" id="dayName">&mdash;</div>
         <div class="date-stamp-date" id="dateStr">&mdash;</div>
+        <div id="dataFreshness" style="font-size:10px;color:#555;text-align:right;margin-top:2px;letter-spacing:0.04em;"></div>
       </div>
       <button class="lock-btn" id="lockBtn" aria-label="Admin lock" title="Planner Admin">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -1637,10 +1638,11 @@
 </div>
 
 <script>
-// Data is fetched from /api/jobs (nginx proxies to Epicor BAQ).
-// The proxy injects Basic Auth + API key from server-side env vars,
-// so credentials never reach the browser.
+// Data is fetched from /api/jobs — served from the server-side BAQ cache,
+// which the Node process refreshes in the background every 5 minutes.
+// Credentials never reach the browser.
 let DATA = [];
+let lastCachedAt = null;   // Date of the BAQ snapshot currently displayed
 
 // Friendly names for planner codes (JobHead_PersonID). Edit as needed.
 const PLANNER_NAMES = {
@@ -1689,13 +1691,32 @@ function transformEpicorRecord(r) {
 }
 
 async function fetchEpicorJobs() {
-  const resp = await fetch('/api/jobs', { credentials: 'omit', cache: 'no-store' });
-  if (!resp.ok) {
-    throw new Error('HTTP ' + resp.status + ' fetching /api/jobs');
+  for (let attempt = 0; ; attempt++) {
+    const resp = await fetch('/api/jobs', { credentials: 'omit', cache: 'no-store' });
+    if (resp.status === 503) {
+      const summaryEl = document.querySelector('.summary');
+      if (summaryEl) {
+        summaryEl.innerHTML = '<div style="padding:12px;color:#999;font-size:14px;">'
+          + 'Server is loading data from Epicor… retrying in 15 seconds.'
+          + '</div>';
+      }
+      await new Promise(r => setTimeout(r, 15000));
+      continue;
+    }
+    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' fetching /api/jobs');
+    const json = await resp.json();
+    lastCachedAt = json._cachedAt ? new Date(json._cachedAt) : null;
+    updateFreshnessDisplay();
+    const records = (json && Array.isArray(json.value)) ? json.value : [];
+    return records.map(transformEpicorRecord);
   }
-  const json = await resp.json();
-  const records = (json && Array.isArray(json.value)) ? json.value : [];
-  return records.map(transformEpicorRecord);
+}
+
+function updateFreshnessDisplay() {
+  const el = document.getElementById('dataFreshness');
+  if (!el || !lastCachedAt) return;
+  const mins = Math.round((Date.now() - lastCachedAt.getTime()) / 60000);
+  el.textContent = mins <= 1 ? 'Data updated just now' : 'Data updated ' + mins + ' min ago';
 }
 
 const PIN_KEY = 'nextop_admin_pin';
@@ -2473,7 +2494,7 @@ pinModal.addEventListener('click', (e) => {
 async function init() {
   const summaryEl = document.querySelector('.summary');
   if (summaryEl) {
-    summaryEl.innerHTML = '<div style="padding:12px;color:#999;font-size:14px;">Loading jobs from Epicor...</div>';
+    summaryEl.innerHTML = '<div style="padding:12px;color:#999;font-size:14px;">Loading…</div>';
   }
   try {
     DATA = await fetchEpicorJobs();
@@ -2492,8 +2513,8 @@ async function init() {
 
 init();
 
-// Auto-refresh every 5 minutes so the shop floor display stays current.
-// syncHot on each refresh prunes hot marks for ops that finished and left the BAQ.
+// Auto-refresh every 5 minutes — the server BAQ cache updates on the same cadence,
+// so each poll picks up the latest snapshot nearly instantly.
 setInterval(async () => {
   try {
     DATA = await fetchEpicorJobs();
@@ -2504,6 +2525,9 @@ setInterval(async () => {
     console.warn('Auto-refresh failed:', err);
   }
 }, 5 * 60 * 1000);
+
+// Keep the freshness label current without a full re-fetch.
+setInterval(updateFreshnessDisplay, 60 * 1000);
 </script>
 </body>
 </html>
