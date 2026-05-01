@@ -1683,7 +1683,8 @@ function transformEpicorRecord(r) {
       return 'S58';
     })(),
     subcontract: !!r.OpMaster_Subcontract,
-    active: !!r.LaborDtl1_ActiveTrans
+    active: !!r.LaborDtl1_ActiveTrans,
+    schedCode: r.JobHead_SchedCode || 'NORMAL'
   };
 }
 
@@ -1776,7 +1777,7 @@ function preprocessData() {
   });
 }
 
-function isHot(j) { return hotSet.has(j._key); }
+function isHot(j) { return hotSet.has(j._key) || j.schedCode === 'IMMED'; }
 function toggleHot(j) {
   const adding = !hotSet.has(j._key);
   if (adding) hotSet.add(j._key); else hotSet.delete(j._key);
@@ -2337,8 +2338,6 @@ function renderJobCard(j, sched) {
   } else if (j._lateStart) {
     const days = Math.abs(j._daysToStart);
     badge = `<span class="late-badge">${days}d Late</span>`;
-  } else if (j._daysToStart === 0) {
-    badge = `<span class="late-badge" style="border-color:var(--yellow);color:var(--yellow)">Starts Today</span>`;
   }
 
   const startClass = j._lateStart ? 'late' : '';
