@@ -1697,7 +1697,6 @@ async function fetchEpicorJobs() {
   return records.map(transformEpicorRecord);
 }
 
-const STORAGE_KEY = 'nextop_hot_jobs';
 const PIN_KEY = 'nextop_admin_pin';
 const DEFAULT_PIN = '172336';
 const PIN_LENGTH = 6;
@@ -1709,17 +1708,28 @@ function getPin() {
     return DEFAULT_PIN;
   } catch(e) { return DEFAULT_PIN; }
 }
-function loadHot() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return new Set(raw ? JSON.parse(raw) : []);
-  } catch(e) { return new Set(); }
-}
-function saveHot(set) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(set))); } catch(e) {}
-}
 
-const hotSet = loadHot();
+// Shared hot state — lives on the server so all users see the same marks.
+// hotSet is a local mirror kept in sync via /api/hot/sync on every BAQ refresh.
+const hotSet = new Set();
+
+async function syncHot() {
+  try {
+    const validKeys = DATA.map(j => j._key);
+    const resp = await fetch('/api/hot/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validKeys)
+    });
+    if (resp.ok) {
+      const keys = await resp.json();
+      hotSet.clear();
+      keys.forEach(k => hotSet.add(k));
+    }
+  } catch(e) {
+    console.warn('Hot sync failed:', e);
+  }
+}
 
 function jobKey(j) { return j.job + '|' + j.asm + '|' + j.op; }
 
@@ -1768,9 +1778,13 @@ function preprocessData() {
 
 function isHot(j) { return hotSet.has(j._key); }
 function toggleHot(j) {
-  if (isHot(j)) hotSet.delete(j._key);
-  else hotSet.add(j._key);
-  saveHot(hotSet);
+  const adding = !hotSet.has(j._key);
+  if (adding) hotSet.add(j._key); else hotSet.delete(j._key);
+  fetch('/api/hot/' + (adding ? 'add' : 'remove'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key: j._key })
+  }).catch(e => console.warn('Hot toggle failed:', e));
 }
 
 // Queue scheduling: HOT first, then by start date.
@@ -2465,6 +2479,7 @@ async function init() {
   try {
     DATA = await fetchEpicorJobs();
     preprocessData();
+    await syncHot();
     render();
   } catch (err) {
     console.error('Failed to load jobs from Epicor:', err);
@@ -2479,10 +2494,12 @@ async function init() {
 init();
 
 // Auto-refresh every 5 minutes so the shop floor display stays current.
+// syncHot on each refresh prunes hot marks for ops that finished and left the BAQ.
 setInterval(async () => {
   try {
     DATA = await fetchEpicorJobs();
     preprocessData();
+    await syncHot();
     render();
   } catch (err) {
     console.warn('Auto-refresh failed:', err);
